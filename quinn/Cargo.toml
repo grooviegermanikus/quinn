@@ -80,6 +80,14 @@ required-features = ["tls-rustls"]
 name = "connection"
 required-features = ["tls-rustls"]
 
+[[example]]
+name = "echo_server"
+required-features = ["tls-rustls"]
+
+[[example]]
+name = "echo_client"
+required-features = ["rustls/dangerous_configuration"]
+
 [[bench]]
 name = "bench"
 harness = false
