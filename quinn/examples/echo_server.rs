@@ -10,7 +10,7 @@ mod common;
 ///
 /// # Running
 /// ```
-///  cargo run --example echo_server -- -l 127.0.0.1:5002
+///  cargo run --example echo_server -- -p 5002
 /// ```
 ///
 
