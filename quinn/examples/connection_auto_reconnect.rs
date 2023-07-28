@@ -9,13 +9,14 @@ use std::fmt;
 use std::net::SocketAddr;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Duration;
 use anyhow::anyhow;
 use rustls::ClientConfig;
 use tracing::{debug, error, info, warn};
 use tracing::field::debug;
 use common::{make_client_endpoint, make_server_endpoint};
-use quinn::{Connecting, Connection, Endpoint};
+use quinn::{Connecting, Connection, Endpoint, RecvStream, SendStream};
 use quinn::VarInt;
 
 #[tokio::main]
@@ -79,11 +80,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 async fn roundtrip(auto_connect: &AutoReconnect) -> anyhow::Result<()> {
     println!(">>");
-    let (mut send_stream, recv_stream) = auto_connect.refresh().await.open_bi().await?;
-    send_stream.write_all("HELLO".as_bytes()).await?;
-    send_stream.finish().await;
-
-    let answer = recv_stream.read_to_end(64 * 1024).await?;
+    let answer = auto_connect.roundtrip("HELLO".as_bytes().to_owned()).await;
     println!("answer: {:?}", answer);
 
     Ok(())
@@ -151,6 +148,7 @@ struct AutoReconnect {
     endpoint: Endpoint,
     current: RefCell<Option<Connection>>,
     target_address: SocketAddr,
+    reconnect_count: AtomicU32,
 }
 
 impl AutoReconnect {
@@ -159,8 +157,22 @@ impl AutoReconnect {
             endpoint,
             current: RefCell::new(None),
             target_address,
+            reconnect_count: AtomicU32::new(0),
         }
     }
+
+    pub async fn roundtrip(&self, payload: Vec<u8>) -> anyhow::Result<Vec<u8>> {
+        // TOOD do smart error handling + reconnect
+        // self.refresh().await.open_bi().await.unwrap()
+        let (mut send_stream, recv_stream) = self.refresh().await.open_bi().await?;
+        send_stream.write_all(payload.as_slice()).await?;
+        send_stream.finish().await?;
+
+        let answer = recv_stream.read_to_end(64 * 1024).await?;
+
+        Ok(answer)
+    }
+
 
     pub async fn refresh(&self) -> Connection {
         let mut foo = self.current.borrow_mut();
@@ -173,10 +185,14 @@ impl AutoReconnect {
 
                     let new_connection = self.create_connection().await;
                     let old_conn = foo.replace(new_connection.clone());
-                    debug!("Replace closed connection {} with {}",
+                    self.reconnect_count.fetch_add(1, Ordering::SeqCst);
+
+                    debug!("Replace closed connection {} with {} (retry {})",
                         old_conn.map(|c| c.stable_id().to_string()).unwrap_or("none".to_string()),
-                        new_connection.stable_id());
+                        new_connection.stable_id(),
+                        self.reconnect_count.load(Ordering::SeqCst));
                     // TODO log old vs new stable_id
+
 
                     return new_connection.clone();
                 } else {
