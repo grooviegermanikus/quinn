@@ -59,6 +59,7 @@ tokio = { version = "1.0.1", features = ["rt", "rt-multi-thread", "time", "macro
 tracing-subscriber = { version = "0.3.0", default-features = false, features = ["env-filter", "fmt", "ansi", "time", "local-time"] }
 tracing-futures = { version = "0.2.0", default-features = false, features = ["std-future"] }
 url = "2"
+deadpool = "0.9.5"
 
 [[example]]
 name = "server"
@@ -86,6 +87,10 @@ required-features = ["tls-rustls"]
 
 [[example]]
 name = "echo_client"
+required-features = ["rustls/dangerous_configuration"]
+
+[[example]]
+name = "echo_client_deadpooled"
 required-features = ["rustls/dangerous_configuration"]
 
 [[bench]]

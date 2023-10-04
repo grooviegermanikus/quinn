@@ -1,11 +1,16 @@
 use std::error::Error;
 use std::net::SocketAddrV4;
+use std::str::FromStr;
 use anyhow::anyhow;
 use clap::Parser;
 use tracing::{debug, error, info, warn};
+use tracing_subscriber::EnvFilter;
 use crate::common::make_server_endpoint;
 
 mod common;
+
+use quinn::VarInt;
+
 
 ///
 /// # Running
@@ -23,8 +28,11 @@ struct Opt {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let subscriber = tracing_subscriber::FmtSubscriber::new();
-    tracing::subscriber::set_global_default(subscriber)?;
+
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .init();
+
 
     let Opt { listen_port } = Opt::parse();
 
@@ -54,6 +62,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 async fn handle_connection(conn: quinn::Connecting) -> anyhow::Result<()> {
     let connection = conn.await?;
+    warn!("Set set_max_concurrent_*_streams!");
+    connection.set_max_concurrent_uni_streams(VarInt::from_u32(5));
+    connection.set_max_concurrent_bi_streams(VarInt::from_u32(5));
     async {
         info!("established");
 

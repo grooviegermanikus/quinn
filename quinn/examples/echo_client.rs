@@ -4,7 +4,10 @@
 //!
 //! note: requires special configuration in Cargo.toml
 
+use quinn::VarInt;
 use std::{error::Error, net::SocketAddr, sync::Arc};
+use std::ops::Range;
+use tracing::info;
 use quinn::{ClientConfig, Endpoint};
 
 mod common;
@@ -41,12 +44,49 @@ async fn run_client(server_addr: SocketAddr) -> Result<(), Box<dyn Error>> {
         .await
         .unwrap();
     println!("[client] connected: addr={}", connection.remote_address());
+
+    // let mut streams = vec![];
+
+    connection.set_max_concurrent_bi_streams(VarInt::from_u32(3));
+
     let (mut send, recv) = connection.open_bi().await.unwrap();
-    send.write_all(b"hello world").await?;
-    println!("written data to server");
-    send.finish().await?;
-    let response = recv.read_to_end(10*1024).await.unwrap();
-    println!("response size {}", response.len());
+    send.finish().await.unwrap();
+    let (mut send, recv) = connection.open_bi().await.unwrap();
+    send.finish().await.unwrap();
+    let (mut send, recv) = connection.open_bi().await.unwrap();
+    send.finish().await.unwrap();
+    let (mut send, recv) = connection.open_bi().await.unwrap();
+    send.finish().await.unwrap();
+    let (mut send, recv) = connection.open_bi().await.unwrap();
+    send.finish().await.unwrap();
+    let (mut send, recv) = connection.open_bi().await.unwrap();
+    send.finish().await.unwrap();
+    let (mut send, recv) = connection.open_bi().await.unwrap();
+    send.finish().await.unwrap();
+    let (mut send, recv) = connection.open_bi().await.unwrap();
+    send.finish().await.unwrap();
+    let (mut send, recv) = connection.open_bi().await.unwrap();
+    send.finish().await.unwrap();
+
+
+    // for _ in 0..10 {
+    //     let result = connection.open_bi().await;
+    //     println!("opened : {:?}", result);
+    //     let (mut send, recv) = result.unwrap();
+    //     streams.push((send, recv));
+    // }
+
+    // for (ref mut send, ref recv) in &mut streams {
+    //     send.write_all(b"hello world").await?;
+    //     println!("written data to server");
+    // }
+    //
+    // for (ref mut send, recv) in streams {
+    //     send.finish().await?;
+    //     let response = recv.read_to_end(10*1024).await.unwrap();
+    //     println!("response size {}", response.len());
+    // }
+
     // Dropping handles allows the corresponding objects to automatically shut down
     drop(connection);
 
