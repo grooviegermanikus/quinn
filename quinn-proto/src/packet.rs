@@ -803,6 +803,7 @@ mod tests {
     use crate::DEFAULT_SUPPORTED_VERSIONS;
     use hex_literal::hex;
     use std::io;
+    use std::net::UdpSocket;
 
     fn check_pn(typed: PacketNumber, encoded: &[u8]) {
         let mut buf = Vec::new();
@@ -900,4 +901,43 @@ mod tests {
             }
         }
     }
+
+    #[cfg(feature = "rustls")]
+    #[test]
+    fn pingo() {
+        use crate::{crypto::rustls::initial_keys, Side};
+        use rustls::quic::Version;
+
+        let dcid = ConnectionId::new(&hex!("06b858ec6f80452b"));
+        let client = initial_keys(Version::V1, &dcid, Side::Client);
+        let mut buf = Vec::new();
+        let header = Header::Long {
+            ty: LongType::Handshake,
+            number: PacketNumber::U8(2), // pn = packet number
+            src_cid: ConnectionId::new(&[]),
+            dst_cid: dcid,
+            version: 0xbabababa,
+        };
+        let encode = header.encode(&mut buf);
+        let header_len = buf.len();
+        buf.resize(header_len + 16 + client.packet.local.tag_len(), 0);
+        encode.finish(
+            &mut buf,
+            &*client.header.local,
+            Some((0, &*client.packet.local)),
+        );
+
+        // TODO we should get c3
+        // should be c3babababa12d71a27b19f471ace2e1a5b087003094242b210258c2e2de85341104ea3e426cc34164800449400000002
+        println!("header");
+        for byte in &buf {
+            print!("{:02x}", byte);
+        }
+        println!();
+
+        let socket = UdpSocket::bind("127.0.0.1:0").expect("couldn't bind to address");
+        socket.send_to(&buf, "127.0.0.1:1033").expect("couldn't send data");
+
+    }
 }
+

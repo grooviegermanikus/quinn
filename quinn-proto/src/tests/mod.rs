@@ -52,7 +52,7 @@ fn version_negotiate_server() {
 #[test]
 fn version_negotiate_client() {
     let _guard = subscribe();
-    let server_addr = "[::2]:7890".parse().unwrap();
+    let server_addr = "127.0.0.1:1033".parse().unwrap();
     let cid_generator_factory: fn() -> Box<dyn ConnectionIdGenerator> =
         || Box::new(RandomConnectionIdGenerator::new(0));
     let mut client = Endpoint::new(
