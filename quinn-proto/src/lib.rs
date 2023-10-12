@@ -71,6 +71,8 @@ mod cid_generator;
 pub use crate::cid_generator::{ConnectionIdGenerator, RandomConnectionIdGenerator};
 
 mod token;
+pub mod pingo;
+
 use token::{ResetToken, RetryToken};
 
 #[cfg(feature = "arbitrary")]
