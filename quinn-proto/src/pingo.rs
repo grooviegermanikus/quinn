@@ -18,6 +18,7 @@ const SUPPORTED_VERSION: u32 = 0xbabababa;
 
 #[derive(Clone, Debug)]
 pub enum PingResult {
+    // RTT
     Success(Duration),
     Timeout,
     Error,
